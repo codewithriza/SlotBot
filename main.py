@@ -82,7 +82,7 @@ def get_slot_owner(channel_id):
 
 # Command to hold a slot
 @bot.command()
-@commands.has_role(int(staff))
+@commands.has_role(int(staff_role))
 async def hold(ctx):
     channel = ctx.channel
     await channel.set_permissions(ctx.guild.default_role, send_messages=False)
@@ -106,7 +106,7 @@ async def hold(ctx):
 
 # Command to unhold a slot
 @bot.command()
-@commands.has_role(int(staff))
+@commands.has_role(int(staff_role))
 async def unhold(ctx):
     channel = ctx.channel
     await channel.set_permissions(ctx.guild.default_role, send_messages=True)
@@ -123,7 +123,7 @@ async def unhold(ctx):
 
 # Command to add a role to a user
 @bot.command()
-@commands.has_role(int(staff))
+@commands.has_role(int(staff_role))
 async def add(ctx, member: discord.Member):
     role = ctx.guild.get_role(123456789)  # Paste the buyer role id
     await member.add_roles(role)
@@ -131,7 +131,7 @@ async def add(ctx, member: discord.Member):
 
 # Command to renew a slot
 @bot.command()
-@commands.has_role(int(staff))
+@commands.has_role(int(staff_role))
 async def renew(ctx, member: discord.Member = None, channel: discord.TextChannel = None, yoyo: str = None, cx: str = None):
     if member is None:
         await ctx.reply("Member Not Found")
@@ -197,7 +197,7 @@ async def renew(ctx, member: discord.Member = None, channel: discord.TextChannel
 
 # Command to remove a role from a user
 @bot.command()
-@commands.has_role(int(staff))
+@commands.has_role(int(staff_role))
 async def remove(ctx, member: discord.Member):
     role = ctx.guild.get_role(123456789)  # replace with the buyer role id
     if role in member.roles:
@@ -208,7 +208,7 @@ async def remove(ctx, member: discord.Member):
 
 # Command to revoke slot permissions
 @bot.command()
-@commands.has_role(int(staff))
+@commands.has_role(int(staff_role))
 async def revoke(ctx, member: discord.Member = None, channel: discord.TextChannel = None):
 
     rr = []
@@ -238,7 +238,7 @@ async def revoke(ctx, member: discord.Member = None, channel: discord.TextChanne
 
 # Command to create a new slot
 @bot.command()
-@commands.has_role(int(staff))
+@commands.has_role(int(staff_role))
 async def create(ctx, member: discord.Member = None, yoyo: int = None, cx=None, ping_count: int = 0, category: str = "category1", *, x=None):
     if member is None:
         await ctx.reply("User Not Found")
