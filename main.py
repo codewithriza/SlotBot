@@ -34,7 +34,7 @@ with open("config.json", "r") as file:
     premium_role_id = config_data["premiumeroleid"]
     guild_id = config_data["guildid"]
     category_id = config_data["categoryid"]
-    bot_token = config_data["token"]
+
 
 # Bot event - called when the bot is ready
 @bot.event
@@ -360,4 +360,4 @@ async def ping(ctx):
                 return
     await ctx.send("You don't have any slots. Create a slot to get pings.")
 
-bot.run(bot_token)
+bot.run("token")
