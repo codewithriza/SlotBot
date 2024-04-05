@@ -49,6 +49,9 @@ To install the bot, follow these steps:
 
 Contributions are welcome! If you have any ideas or improvements, feel free to open an issue or submit a pull request.
 
+
+## Support
+
 If you find this project useful, please consider giving it a star on GitHub! 🌟
 
 ---
