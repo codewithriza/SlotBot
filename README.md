@@ -4,6 +4,9 @@
 
 This Discord bot allows users to create slots for various purposes, such as selling items or offering services. It includes features like creating, renewing, holding, and unholding slots, as well as adding and removing users from slots.
 
+> [!IMPORTANT]
+> Slot Bot is a high-performance Discord bot designed to streamline slot management in your server. It requires the `discord.py` library and is built with advanced functionality to enhance your server's slot experience.
+
 ## Features
 
 - Create slots with specified durations and categories
@@ -44,7 +47,6 @@ To install the bot, follow these steps:
 
 ## Contributing
 
-Contributions are welcome! If you have any ideas or improvements, feel free to open an is sue or submit a pull request.
+Contributions are welcome! If you have any ideas or improvements, feel free to open an issue or submit a pull request.
 
 If you find this project useful, please consider giving it a star on GitHub! 🌟
-
