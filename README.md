@@ -2,10 +2,7 @@
 
 ## Description
 
-This Discord bot allows users to create slots for various purposes, such as selling items or offering services. It includes features like creating, renewing, holding, and unholding slots, as well as adding and removing users from slots.
-
-> [!IMPORTANT]
-> Slot Bot is a high-performance Discord bot designed to streamline slot management in your server. It requires the `discord.py` library and is built with advanced functionality to enhance your server's slot experience.
+Slot Bot is a high-performance Discord bot designed to streamline slot management in your server. It allows users to create slots for various purposes, such as selling items or offering services. The bot includes features like creating, renewing, holding, and unholding slots, as well as adding and removing users from slots.
 
 ## Features
 
@@ -41,14 +38,16 @@ To install the bot, follow these steps:
 
 1. Clone the repository: `git clone https://github.com/codewithriza/SlotBot.git`
 2. Install dependencies: `pip install -r requirements.txt`
-3. Set up your configuration: Create a `config.py` file with your bot token and other settings.
-3. Replace token and other guild id , channel id , 2 category id in `main.py`
-4. Run the bot: `python main.py`
+3. Set up your configuration: Create a `config.json` file with your bot token, category ID, staff ID, etc. Make sure to keep your bot token private and secure.
+4. Replace token and other guild id, channel id, 2 category id in `main.py`
+5. Run the bot: `python main.py`
+
+> [!IMPORTANT]
+> Ensure that your bot token is kept private and setup in config.json along with category id staff id etc create separate category for 1 and 2 and read through the code to understand
 
 ## Contributing
 
 Contributions are welcome! If you have any ideas or improvements, feel free to open an issue or submit a pull request.
-
 
 ## Support
 
@@ -58,4 +57,3 @@ If you find this project useful, please consider giving it a star on GitHub! ðŸŒ
 
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/users/887532157747212370)
 [![X](https://img.shields.io/badge/X-%23000000.svg?style=for-the-badge&logo=X&logoColor=white)](https://twitter.com/pyriza)
-
