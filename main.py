@@ -11,6 +11,15 @@ bot.remove_command("help")
 
 @bot.event
 async def on_ready():
+    print("\033[94m" + """
+
+██████╗░██╗███████╗░█████╗░
+██╔══██╗██║╚════██║██╔══██╗
+██████╔╝██║░░███╔═╝███████║
+██╔══██╗██║██╔══╝░░██╔══██║
+██║░░██║██║███████╗██║░░██║
+╚═╝░░╚═╝╚═╝╚══════╝╚═╝░░╚═╝
+""" + "\033[0m" + "Made By @codewithriza")
     print(f"{bot.user.name} is Ready")
     await expire()
                             
