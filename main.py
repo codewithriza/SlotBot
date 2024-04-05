@@ -1,5 +1,7 @@
 # Slot Bot - A Discord bot for managing slots
 # Made by Riza (https://github.com/codewithriza/SlotBot)
+# Contact for help - https://discord.com/users/887532157747212370
+# Create an issue in this repo for support: https://github.com/codewithriza/SlotBot/issues
 
 import discord
 from discord.ext import commands, tasks
