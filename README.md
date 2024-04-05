@@ -21,7 +21,7 @@ This Discord bot allows users to create slots for various purposes, such as sell
 
 To use the bot, follow these steps:
 
-1. **Create a Slot:** Use the `,create` command to create a new slot. Example: `,create @user 1 d his Slot`.
+1. **Create a Slot:** Use the `,create` command to create a new slot. Example: `,create @user 1 d category1 4 Slot`.
 
 2. **Add Users:** Use the `,add` command to add users to a slot. Example: `,add @user`.
 
