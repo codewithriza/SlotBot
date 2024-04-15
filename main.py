@@ -20,7 +20,7 @@ bot = commands.Bot(
     activity=discord.Activity(
         type=discord.ActivityType.watching, name="Riza"
     ),
-    guild = discord.Object(id=1218925217129435186)
+    guild = discord.Object(id=1229389945626693714)
 )
 bot.remove_command("help")
 
@@ -79,6 +79,7 @@ async def expire():
                 channel = bot.get_channel(item["channelid"])
                 guild = bot.get_guild(int(hmm["guildid"]))
                 member = guild.get_member(item["userid"])
+                await bot.tree.sync()
 
             
 
@@ -113,7 +114,7 @@ def get_slot_owner(channel_id):
 
 @bot.command()
 async def delete(ctx):
-    if discord.utils.get(ctx.guild.roles, id=1218925217129435190) in ctx.author.roles:
+    if discord.utils.get(ctx.guild.roles, id=1229402537648455700) in ctx.author.roles:
         try:
             await ctx.channel.delete()
             await ctx.send("Channel deleted successfully.")
@@ -170,7 +171,7 @@ async def unhold(ctx):
 @bot.command()
 @commands.has_role(int(staff))
 async def add(ctx, member: discord.Member):
-    role = ctx.guild.get_role(1218925217129435189)
+    role = ctx.guild.get_role(1229474713345069199)
     await member.add_roles(role)
     await ctx.send(f"Added role {role.name} to {member.display_name}")
 @bot.command()
@@ -255,7 +256,7 @@ Inactivity For More Than 2 Days Will Result In Removal Of Slot (YOU WILL BE WARN
 @bot.command()
 @commands.has_role(int(staff))
 async def remove(ctx, member: discord.Member):
-    role = ctx.guild.get_role(1218925217129435189)
+    role = ctx.guild.get_role(1229474713345069199)
     if role in member.roles:
         await member.remove_roles(role)
         await ctx.send(f"Removed role {role.name} from {member.display_name}")
@@ -312,9 +313,9 @@ async def create(ctx, member: discord.Member = None, yoyo: int = None, cx=None, 
 
     # Determine the category ID based on the user's choice
     if category.lower() == 'category1':
-        category_id = 1220144846166294580  # Category 1 ID
+        category_id = 1229474371588849745  # Category 1 ID
     else:
-        category_id = 1222969528699326529  # Category 2 ID
+        category_id = 1229474415734034472  # Category 2 ID
 
     if x is None:
         x = member.display_name
@@ -350,7 +351,7 @@ async def create(ctx, member: discord.Member = None, yoyo: int = None, cx=None, 
 14. Inactivity for more than 2 days will result in the removal of the slot (you will be warned first).
 """
     embed.add_field(name="Rules", value=rules, inline=False)
-    embed.set_image(url="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS1Rlwx7Nmk_MwpAn19xlI5blBL_Y24IzHKHkDSeRY-wg&s")
+    embed.set_image(url="https://media.discordapp.net/attachments/1229389946226475122/1229475051817140379/Rick-and-Morty-sunglasses.jpg?ex=662fd0de&is=661d5bde&hm=3f5f6515b54ba7d626e2a1eccfb7a89a2a7061fd6b96d203e6143c0a500138ab&=&format=webp&width=932&height=700")
     await a.send(embed=embed)
 
     if cx.lower() == "d":
@@ -385,8 +386,8 @@ async def create(ctx, member: discord.Member = None, yoyo: int = None, cx=None, 
         json.dump(data, file, indent=4)
 
 
-@bot.command()
-async def ping(ctx):
+@bot.hybrid_command()
+async def ping(ctx, mention: str = None):
     try:
         with open("pingcount.json", "r") as file:
             data = json.load(file)
@@ -404,13 +405,20 @@ async def ping(ctx):
                     with open("pingcount.json", "w") as file:
                         json.dump(data, file, indent=4)
 
-                    # Send @here
-                    here_message = await ctx.send("@here")
+                    # Determine the mention based on user input
+                    mention_str = ""
+                    if mention == "@here":
+                        mention_str = "@here"
+                    elif mention == "@everyone":
+                        mention_str = "@everyone"
+
+                    # Send the appropriate mention
+                    here_message = await ctx.send(mention_str)
 
                     # Send a message in an embed format
                     embed = discord.Embed(
                         title="Ping Detected",
-                        description=f"{ctx.author.mention} pinged @here in their slot! You have {data[i]['ping_count']} ping{'s' if data[i]['ping_count'] != 1 else ''} left.\n\n**Use <#1220914365193257010>**",
+                        description=f"{ctx.author.mention} pinged {mention_str} in their slot! You have {data[i]['ping_count']} ping{'s' if data[i]['ping_count'] != 1 else ''} left.\n\n**Use <#1220914365193257010>**",
                         color=0xFFFF00
                     )
                     await ctx.send(embed=embed)
@@ -418,7 +426,7 @@ async def ping(ctx):
                     # Wait for 5 seconds
                     await asyncio.sleep(5)
 
-                    # Delete the @here message
+                    # Delete the mention message
                     await here_message.delete()
                     return
 
@@ -430,6 +438,22 @@ async def ping(ctx):
                 return
     await ctx.send("You don't have any slots. Create a slot to get pings.")
 
+@bot.hybrid_command()
+async def nuke(ctx):
+    # Check if the user has the specified role
+    role = ctx.guild.get_role(1229474713345069199)
+    if role and role in ctx.author.roles:
+        # Build the embed
+        embed = discord.Embed(
+            title="Nuke",
+            description=f"Successfully nuked {ctx.channel.mention}",
+            color=discord.Color.red()
+        )
+        embed.set_image(url="https://media.discordapp.net/attachments/1229481737348976740/1229496580319739924/latest.png?ex=662fe4eb&is=661d6feb&hm=01571fce0db9e7b8a0b6c9f8146197c8fed98aaa99991bf51da563f3cd16e31c&=&format=webp&quality=lossless&width=846&height=874")
 
 
+        # Send the embed
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send("You do not have permission to use this command.")
 bot.run("paste your bot token")
