@@ -34,7 +34,7 @@ To use the bot, follow these steps:
 
 6. **Remove Users:** Use the `,remove` command to remove users from a slot. Example: `,remove @user`.
 
-7. **Ping Notification:** Use the `,ping` command to receive a notification in the slot channel. Example: `,ping`.
+7. **Ping Notification:** Use the `,ping` command to receive a notification in the slot channel. You can use `,ping everyone` or `,ping @here` to mention everyone or here respectively. Example: `,ping`.
 
 8. **Nuke Command:** Use the `,nuke` command to delete all messages in the slot channel if you have owner permissions. Example: `,nuke`.
 
