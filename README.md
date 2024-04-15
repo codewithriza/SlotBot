@@ -36,6 +36,9 @@ To use the bot, follow these steps:
 
 7. **Ping Notification:** Use the `,ping` command to receive a notification in the slot channel. Example: `,ping`.
 
+8. **Nuke Command:** Use the `,nuke` command to delete all messages in the slot channel if you have owner permissions. Example: `,nuke`.
+
+
 ## Installation
 
 To install the bot, follow these steps:
