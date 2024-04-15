@@ -4,6 +4,10 @@
 
 Slot Bot is a Discord bot designed to streamline slot management in your server. It allows users to create slots for various purposes, such as selling items or offering services. The bot includes features like creating, renewing, holding, and unholding slots, as well as adding and removing users from slots.
 
+> [!note]
+> The Discord bot needs to have admin permissions and be positioned at the top of the role hierarchy, above the `buyers` in order to create a slot
+
+
 ## Features
 
 - Create slots with specified durations and categories
