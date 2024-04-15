@@ -438,11 +438,18 @@ async def ping(ctx, mention: str = None):
                 return
     await ctx.send("You don't have any slots. Create a slot to get pings.")
 
-@bot.hybrid_command()
+@bot.command()
 async def nuke(ctx):
     # Check if the user has the specified role
     role = ctx.guild.get_role(1229474713345069199)
     if role and role in ctx.author.roles:
+        # Define a predicate to filter messages
+        def is_not_bot_embed_message(message):
+            return message.author != bot.user or not message.embeds
+
+        # Delete all messages except bot embed messages
+        await ctx.channel.purge(limit=None, check=is_not_bot_embed_message)
+
         # Build the embed
         embed = discord.Embed(
             title="Nuke",
@@ -450,7 +457,6 @@ async def nuke(ctx):
             color=discord.Color.red()
         )
         embed.set_image(url="https://media.discordapp.net/attachments/1229481737348976740/1229496580319739924/latest.png?ex=662fe4eb&is=661d6feb&hm=01571fce0db9e7b8a0b6c9f8146197c8fed98aaa99991bf51da563f3cd16e31c&=&format=webp&quality=lossless&width=846&height=874")
-
 
         # Send the embed
         await ctx.send(embed=embed)
