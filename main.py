@@ -92,7 +92,7 @@ async def expire():
    
 @bot.command()
 async def help(ctx):
-    embed = discord.Embed(description="**,create** - Use To Create Slot `,create @usermention 1 m slotname`\n**,add** - Use To Add User In Slot`,add @usermention`\n**,remove** - Use To Remove User In SLot\n**,renew** - Use To Renew Slot\n**,hold\n**,**unhold**",color=0x8A2BE2)
+    embed = discord.Embed(description="**,create** - Use To Create Slot `,create @user 7 d 2 category1 slotname`\n**,add** - Use To Add User In Slot`,add @usermention`\n**,remove** - Use To Remove User In SLot\n**,renew** - Use To Renew Slot\n**,hold\n**,**unhold**",color=0x8A2BE2)
     embed.set_thumbnail(url=ctx.guild.icon)
     embed.set_author(name="Slot Bot Help Menu")
     await ctx.send(embed=embed,delete_after=30)
