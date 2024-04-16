@@ -11,8 +11,6 @@ import json
 import os
 from colorama import Fore
 
-
-
 bot = commands.Bot(
     command_prefix=",",
     intents=discord.Intents.all(),
@@ -81,15 +79,6 @@ async def expire():
                 member = guild.get_member(item["userid"])
                 await bot.tree.sync()
 
-            
-
-
-
-
-
-
-
-   
 @bot.command()
 async def help(ctx):
     embed = discord.Embed(description="**,create** - Use To Create Slot `,create @user 7 d 2 category1 slotname`\n**,add** - Use To Add User In Slot`,add @usermention`\n**,remove** - Use To Remove User In SLot\n**,renew** - Use To Renew Slot\n**,hold\n**,**unhold**\n**,nuke\n**/ping @everyone/@here",color=0x8A2BE2)
