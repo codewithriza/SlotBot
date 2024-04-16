@@ -49,7 +49,7 @@ To install the bot, follow these steps:
 2. Install dependencies: `pip install -r requirements.txt`
 3. Set up your configuration: Create a `config.json` file with your bot token, category ID, staff ID, etc. Make sure to keep your bot token private and secure.
 4. Replace token and other guild id, channel id, 2 category id in `main.py`
-5. Run the bot: `python main.py`
+5. Run the bot: `python3 main.py`
 
 > [!IMPORTANT]
 > Ensure that your bot token is kept private and setup in config.json along with category id staff id etc create separate category for 1 and 2 and read through the code to understand
