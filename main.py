@@ -386,7 +386,7 @@ async def create(ctx, member: discord.Member = None, yoyo: int = None, cx=None, 
         json.dump(data, file, indent=4)
 
 
-@bot.hybrid_command()
+@bot.command()
 async def ping(ctx, mention: str = None):
     try:
         with open("pingcount.json", "r") as file:
