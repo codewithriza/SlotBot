@@ -1,4 +1,6 @@
 # Slot Bot
+[![SlotBot Thumbnail](https://github.com/codewithriza/SlotBot/raw/main/image/slotbotthumbnail.png)](https://github.com/codewithriza/SlotBot) [YT tutorial](https://www.youtube.com/watch?v=JYJ2N_ebS_w)
+
 
 ## Description
 
@@ -64,3 +66,5 @@ If you find this project useful, please consider giving it a star on GitHub! ðŸŒ
 
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/users/887532157747212370)
 [![X](https://img.shields.io/badge/X-%23000000.svg?style=for-the-badge&logo=X&logoColor=white)](https://twitter.com/pyriza)
+[![YouTube](https://img.shields.io/badge/YouTube-%23FF0000.svg?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=JYJ2N_ebS_w)
+
