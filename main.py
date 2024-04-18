@@ -18,7 +18,7 @@ bot = commands.Bot(
     activity=discord.Activity(
         type=discord.ActivityType.watching, name="Riza"
     ),
-    guild = discord.Object(id=1229389945626693714)
+    guild = discord.Object(id=1229389945626693714) # Change it with your guild id right click on your server and copy the server id and paste it instead of 1229389945626693714
 )
 bot.remove_command("help")
 
