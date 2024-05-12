@@ -36,7 +36,6 @@ async def on_ready():
     
     """ + "\033[0m" + "Made By @codewithriza")
     print("Bot is ready!")
-    await bot.tree.sync()
     bot.add_view(CreateButton())
     bot.add_view(CloseButton())
     bot.add_view(TrashButton())
