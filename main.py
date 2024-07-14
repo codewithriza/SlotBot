@@ -36,9 +36,6 @@ async def on_ready():
     
     """ + "\033[0m" + "Made By @codewithriza")
     print("Bot is ready!")
-    bot.add_view(CreateButton())
-    bot.add_view(CloseButton())
-    bot.add_view(TrashButton())
 with open("config.json", "r") as file:
     hmm = json.load(file)
 
