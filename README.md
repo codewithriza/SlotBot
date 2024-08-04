@@ -1,5 +1,4 @@
 # Slot Bot
-[![SlotBot Thumbnail](https://github.com/codewithriza/SlotBot/raw/main/image/slotbotthumbnail.png)](https://github.com/codewithriza/SlotBot) [YT tutorial](https://www.youtube.com/watch?v=JYJ2N_ebS_w)
 
 
 ## Description
