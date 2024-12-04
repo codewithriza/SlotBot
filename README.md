@@ -55,11 +55,11 @@ To install the bot, follow these steps:
 
 ## Contributing
 
-Contributions are welcome! If you have any ideas or improvements, feel free to open an issue or submit a pull request.
+Contributions are welcome! If you have any ideas or improvements, feel free to open an issue or submit a pull request.(or) update us in [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/JdyvFVgsTN)
 
 ## Support
 
-If you find this project useful, please consider giving it a star on GitHub! 🌟
+If you find this project useful, please consider giving it a star on GitHub! 🌟 
 
 ---
 
