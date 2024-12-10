@@ -7,14 +7,10 @@
 </div>
 
 
+---
 
 
-
-> [!note]
-> The Discord bot needs to have admin permissions and be positioned at the top of the role hierarchy, above the `buyers` in order to create a slot
-
-
-## Features
+## 📖 Features
 
 - Create slots with specified durations and categories
 - Renew slots with updated durations
@@ -43,6 +39,15 @@ To use the bot, follow these steps:
 7. **Ping Notification:** Use the `,ping` command to receive a notification in the slot channel. You can use `,ping everyone` or `,ping @here` to mention everyone or here respectively. Example: `,ping`.
 
 8. **Nuke Command:** Use the `,nuke` command to delete all messages in the slot channel if you have owner permissions. Example: `,nuke`.
+
+
+
+
+
+> [!note]
+> The Discord bot needs to have admin permissions and be positioned at the top of the role hierarchy, above the `buyers` in order to create a slot
+
+
 
 
 ## Installation
