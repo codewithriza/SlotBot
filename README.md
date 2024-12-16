@@ -10,8 +10,22 @@
 
 ---
 
+---
 
-## 📖 Features
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Commands](#commands)
+- [Contributing](#contributing)
+- [Support](#support)
+- [License](#license)
+
+---
+
+
+## Features
 
 - Create slots with specified durations and categories
 - Renew slots with updated durations
