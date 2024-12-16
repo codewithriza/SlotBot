@@ -3,7 +3,6 @@
 # Contact for help - https://discord.com/users/887532157747212370
 # Create an issue in this repo for support: https://github.com/codewithriza/SlotBot/issues
 
-
 import discord
 from discord.ext import commands , tasks
 import datetime
@@ -447,4 +446,5 @@ async def nuke(ctx):
         await ctx.send(embed=embed)
     else:
         await ctx.send("You do not have permission to use this command.")
-bot.run("paste your bot token")
+        
+bot.run(" paste your bot token from https://discord.com/developers/applications ")
