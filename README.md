@@ -1,6 +1,7 @@
 <div align="center">
-  <h2><code>Slot Bot</code></h2>
-  <h4>🙌 Discord bot designed to streamline slot management in your server</h4>
+  <h1><code>Slot Bot</code></h1>
+  <h2>🙌 Discord bot designed to streamline slot management in your server </h2>
+   <h5>Click the thumbnail below to watch the tutorial on setting it up!</h5>
   <a href="https://drive.google.com/file/d/1ESOROJ6V65hZ3IOk70nerMaDbOmP12UQ/view">
     <img src="https://github.com/codewithriza/SlotBot/blob/main/image/banner.png" alt="Slot Bot Thumbnail" >
   </a>
