@@ -194,7 +194,7 @@ async def renew(ctx, member: discord.Member = None, channel: discord.TextChannel
     await channel.set_permissions(member,view_channel=True,send_messages=True,mention_everyone=True)
     role = discord.utils.get(ctx.guild.roles, id=int(rid))
     await member.add_roles(role)
-    print("ruw")
+    print("renew")
     async for message in channel.history(limit=1000):
         await message.delete()
     dataz = {
