@@ -908,3 +908,153 @@ async def slotinfo(ctx, channel: discord.TextChannel = None):
     embed.set_footer(text=ctx.guild.name)
     await ctx.send(embed=embed)
 
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def slots(ctx):
+    """List all active slots."""
+    data = load_json(PINGCOUNT_PATH)
+    if not data:
+        await ctx.reply("ℹ️ No active slots found.")
+        return
+
+    now = datetime.datetime.now().timestamp()
+    lines = []
+    for i, entry in enumerate(data, 1):
+        member = ctx.guild.get_member(entry["userid"])
+        member_str = member.mention if member else f"<@{entry['userid']}>"
+        channel = ctx.guild.get_channel(entry["channelid"])
+        channel_str = channel.mention if channel else f"#{entry['channelid']}"
+        end_ts = int(entry.get("endtime", 0))
+        status = "🟢 Active" if now < end_ts else "🔴 Expired"
+        lines.append(f"`{i}.` {channel_str} → {member_str} | {status} | Expires <t:{end_ts}:R>")
+
+    embed = discord.Embed(
+        title=f"🎰 Active Slots ({len(data)})",
+        description="\n".join(lines),
+        color=0x8A2BE2,
+    )
+    embed.set_footer(text=ctx.guild.name)
+    await ctx.send(embed=embed)
+
+
+# ─── User Commands ───────────────────────────────────────────────────────────
+@bot.command()
+async def ping(ctx, mention: str = None):
+    """Ping @everyone or @here in your slot channel (uses ping count)."""
+    data = load_json(PINGCOUNT_PATH)
+
+    for i, user_data in enumerate(data):
+        if user_data["userid"] == ctx.author.id:
+            if ctx.channel.id != user_data["channelid"]:
+                await ctx.send("❌ You can only use the ping command in your slot channel.")
+                return
+
+            if user_data["ping_count"] <= 0:
+                embed = discord.Embed(
+                    title="❌ No Pings Left",
+                    description="You have used all your pings. They reset every 24 hours.",
+                    color=discord.Color.red(),
+                )
+                await ctx.send(embed=embed, delete_after=10)
+                return
+
+            # Decrement ping count
+            data[i]["ping_count"] -= 1
+            save_json(PINGCOUNT_PATH, data)
+
+            # Determine mention type
+            if mention and mention.lower() in ("@here", "here"):
+                mention_str = "@here"
+            elif mention and mention.lower() in ("@everyone", "everyone"):
+                mention_str = "@everyone"
+            else:
+                mention_str = "@here"  # Default to @here
+
+            # Send the ping
+            ping_msg = await ctx.send(mention_str)
+
+            # Send info embed
+            pings_left = data[i]["ping_count"]
+            embed = discord.Embed(
+                title="📢 Ping Sent",
+                description=(
+                    f"{ctx.author.mention} pinged {mention_str}!\n"
+                    f"**Pings remaining:** {pings_left}/{user_data.get('max_pings', DEFAULT_PING_COUNT)}"
+                ),
+                color=0xFFFF00,
+            )
+            await ctx.send(embed=embed)
+
+            # Delete the raw ping after 5 seconds
+            await asyncio.sleep(5)
+            try:
+                await ping_msg.delete()
+            except discord.NotFound:
+                pass
+            return
+
+    await ctx.send("❌ You don't have any slots. Contact staff to get one.")
+
+
+@bot.command()
+async def nuke(ctx):
+    """Clear all non-embed messages in your slot channel."""
+    # Check if user owns this slot
+    slot = get_slot_data(ctx.channel.id)
+    if slot is None:
+        await ctx.send("❌ This is not a slot channel.")
+        return
+
+    # Allow slot owner or staff
+    is_owner = slot["userid"] == ctx.author.id
+    staff_role = ctx.guild.get_role(STAFF_ROLE_ID)
+    is_staff = staff_role and staff_role in ctx.author.roles
+
+    if not is_owner and not is_staff:
+        await ctx.send("❌ You do not have permission to use this command.")
+        return
+
+    def is_not_bot_embed(message):
+        return message.author != bot.user or not message.embeds
+
+    deleted = await ctx.channel.purge(limit=None, check=is_not_bot_embed)
+
+    embed = discord.Embed(
+        title="💣 Channel Nuked",
+        description=f"Successfully cleared **{len(deleted)}** messages from {ctx.channel.mention}",
+        color=discord.Color.red(),
+    )
+    embed.set_footer(text=f"Nuked by {ctx.author.display_name}")
+    await ctx.send(embed=embed, delete_after=10)
+    logger.info(f"Channel {ctx.channel.name} nuked by {ctx.author} ({len(deleted)} messages)")
+
+
+@bot.command()
+async def myslot(ctx):
+    """View your own slot information."""
+    data = load_json(PINGCOUNT_PATH)
+
+    for entry in data:
+        if entry["userid"] == ctx.author.id:
+            channel = ctx.guild.get_channel(entry["channelid"])
+            channel_str = channel.mention if channel else f"#{entry['channelid']}"
+            end_ts = int(entry.get("endtime", 0))
+            pings_left = entry.get("ping_count", 0)
+            max_pings = entry.get("max_pings", DEFAULT_PING_COUNT)
+            created_ts = int(entry.get("created_at", 0))
+
+            embed = discord.Embed(
+                title="🎰 Your Slot",
+                color=0x8A2BE2,
+            )
+            embed.add_field(name="Channel", value=channel_str, inline=True)
+            embed.add_field(name="Pings Left", value=f"{pings_left}/{max_pings}", inline=True)
+            embed.add_field(name="Expires", value=f"<t:{end_ts}:R>" if end_ts else "Unknown", inline=True)
+            if created_ts:
+                embed.add_field(name="Created", value=f"<t:{created_ts}:F>", inline=True)
+            if ctx.author.avatar:
+                embed.set_thumbnail(url=ctx.author.avatar.url)
+            embed.set_footer(text=ctx.guild.name)
+            await ctx.send(embed=embed)
+            return
