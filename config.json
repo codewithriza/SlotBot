@@ -1,6 +1,13 @@
 {
-        "staffrole": 123, 
-        "premiumeroleid": 123,
-        "guildid": 123,
-        "categoryid": 123
+    "token": "",
+    "prefix": ",",
+    "staffrole": 0,
+    "premiumeroleid": 0,
+    "guildid": 0,
+    "categoryid_1": 0,
+    "categoryid_2": 0,
+    "slot_role_id": 0,
+    "log_channel_id": 0,
+    "default_ping_count": 3,
+    "ping_reset_hours": 24
 }
