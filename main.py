@@ -1058,3 +1058,111 @@ async def myslot(ctx):
             embed.set_footer(text=ctx.guild.name)
             await ctx.send(embed=embed)
             return
+
+    await ctx.send("❌ You don't have any active slots.")
+
+
+@bot.command()
+async def stats(ctx):
+    """View bot statistics."""
+    data = load_json(PINGCOUNT_PATH)
+    now = datetime.datetime.now().timestamp()
+
+    total_slots = len(data)
+    active_slots = sum(1 for e in data if now < float(e.get("endtime", 0)))
+    expired_slots = total_slots - active_slots
+
+    embed = discord.Embed(
+        title="📊 SlotBot Statistics",
+        color=0x8A2BE2,
+    )
+    embed.add_field(name="Total Slots", value=str(total_slots), inline=True)
+    embed.add_field(name="Active Slots", value=f"🟢 {active_slots}", inline=True)
+    embed.add_field(name="Expired Slots", value=f"🔴 {expired_slots}", inline=True)
+    embed.add_field(name="Server Members", value=str(ctx.guild.member_count), inline=True)
+    embed.add_field(name="Bot Latency", value=f"{round(bot.latency * 1000)}ms", inline=True)
+    embed.add_field(name="Uptime", value=f"<t:{int(bot.user.created_at.timestamp())}:R>", inline=True)
+
+    if ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
+    embed.set_footer(text=f"SlotBot v2.0 • Made by @codewithriza")
+    await ctx.send(embed=embed)
+
+
+# ─── Slash Commands ──────────────────────────────────────────────────────────
+@bot.tree.command(name="ping", description="Check bot latency")
+async def slash_ping(interaction: discord.Interaction):
+    """Check the bot's latency."""
+    latency = round(bot.latency * 1000)
+    embed = discord.Embed(
+        title="🏓 Pong!",
+        description=f"Bot latency: **{latency}ms**",
+        color=0x8A2BE2,
+    )
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+@bot.tree.command(name="slotinfo", description="View slot information for a channel")
+@app_commands.describe(channel="The slot channel to check")
+async def slash_slotinfo(interaction: discord.Interaction, channel: discord.TextChannel = None):
+    """View slot information via slash command."""
+    if channel is None:
+        channel = interaction.channel
+
+    slot = get_slot_data(channel.id)
+    if slot is None:
+        await interaction.response.send_message("❌ No slot data found for this channel.", ephemeral=True)
+        return
+
+    member = interaction.guild.get_member(slot["userid"])
+    member_str = member.mention if member else f"<@{slot['userid']}>"
+
+    end_ts = int(slot.get("endtime", 0))
+    pings_left = slot.get("ping_count", 0)
+    max_pings = slot.get("max_pings", DEFAULT_PING_COUNT)
+
+    embed = discord.Embed(
+        title=f"📊 Slot Info – #{channel.name}",
+        color=0x8A2BE2,
+    )
+    embed.add_field(name="Owner", value=member_str, inline=True)
+    embed.add_field(name="Pings Left", value=f"{pings_left}/{max_pings}", inline=True)
+    embed.add_field(name="Expires", value=f"<t:{end_ts}:R>" if end_ts else "Unknown", inline=True)
+    await interaction.response.send_message(embed=embed)
+
+
+@bot.tree.command(name="stats", description="View bot statistics")
+async def slash_stats(interaction: discord.Interaction):
+    """View bot statistics via slash command."""
+    data = load_json(PINGCOUNT_PATH)
+    now = datetime.datetime.now().timestamp()
+
+    total_slots = len(data)
+    active_slots = sum(1 for e in data if now < float(e.get("endtime", 0)))
+
+    embed = discord.Embed(
+        title="📊 SlotBot Statistics",
+        color=0x8A2BE2,
+    )
+    embed.add_field(name="Total Slots", value=str(total_slots), inline=True)
+    embed.add_field(name="Active Slots", value=f"🟢 {active_slots}", inline=True)
+    embed.add_field(name="Bot Latency", value=f"{round(bot.latency * 1000)}ms", inline=True)
+    embed.add_field(name="Server Members", value=str(interaction.guild.member_count), inline=True)
+
+    if interaction.guild.icon:
+        embed.set_thumbnail(url=interaction.guild.icon.url)
+    embed.set_footer(text="SlotBot v2.0 • Made by @codewithriza")
+    await interaction.response.send_message(embed=embed)
+
+
+# ─── Run the Bot ─────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    if not TOKEN:
+        logger.error(
+            "No bot token found! Set it in config.json as 'token' or "
+            "set the SLOTBOT_TOKEN environment variable."
+        )
+        exit(1)
+
+    logger.info("Starting SlotBot...")
+    bot.run(TOKEN, log_handler=None)
