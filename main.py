@@ -708,3 +708,203 @@ async def revoke(ctx, member: discord.Member = None, channel: discord.TextChanne
 @bot.command()
 @commands.has_role(STAFF_ROLE_ID)
 async def hold(ctx):
+    """Put the current slot on hold."""
+    channel = ctx.channel
+    user_id = get_slot_owner(channel.id)
+
+    if user_id is None:
+        await ctx.reply("❌ Could not find slot owner for this channel.")
+        return
+
+    await channel.set_permissions(ctx.guild.default_role, send_messages=False)
+
+    member = ctx.guild.get_member(user_id)
+    if member:
+        await channel.set_permissions(member, send_messages=False)
+
+    embed = discord.Embed(
+        title="⚠️ Slot On Hold",
+        description=(
+            f"A report has been opened against <@{user_id}>.\n"
+            f"**Do not start a deal with them until the slot is reopened.**"
+        ),
+        color=discord.Color.yellow(),
+    )
+    embed.set_thumbnail(url="https://www.iconsdb.com/icons/preview/white/warning-xxl.png")
+    embed.set_footer(text=f"Held by {ctx.author.display_name}")
+    await channel.send(embed=embed)
+
+    # Log
+    log_embed = discord.Embed(
+        title="📋 Slot Held",
+        description=f"**Channel:** {channel.mention}\n**User:** <@{user_id}>\n**Held by:** {ctx.author.mention}",
+        color=discord.Color.yellow(),
+        timestamp=datetime.datetime.now(),
+    )
+    await send_log(ctx.guild, log_embed)
+    logger.info(f"Slot held in {channel.name} by {ctx.author}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def unhold(ctx):
+    """Remove hold from the current slot."""
+    channel = ctx.channel
+    user_id = get_slot_owner(channel.id)
+
+    if user_id is None:
+        await ctx.reply("❌ Could not find slot owner for this channel.")
+        return
+
+    await channel.set_permissions(ctx.guild.default_role, send_messages=False)
+
+    member = ctx.guild.get_member(user_id)
+    if member:
+        await channel.set_permissions(member, send_messages=True, mention_everyone=True)
+
+    embed = discord.Embed(
+        title="✅ Slot Unheld",
+        description="The slot has been unheld and the case has been resolved.",
+        color=discord.Color.green(),
+    )
+    embed.set_footer(text=f"Unheld by {ctx.author.display_name}")
+    await channel.send(embed=embed)
+
+    # Log
+    log_embed = discord.Embed(
+        title="📋 Slot Unheld",
+        description=f"**Channel:** {channel.mention}\n**User:** <@{user_id}>\n**Unheld by:** {ctx.author.mention}",
+        color=discord.Color.green(),
+        timestamp=datetime.datetime.now(),
+    )
+    await send_log(ctx.guild, log_embed)
+    logger.info(f"Slot unheld in {channel.name} by {ctx.author}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def add(ctx, member: discord.Member = None):
+    """Add the slot role to a user."""
+    if member is None:
+        await ctx.reply(f"❌ Please mention a user. Usage: `{PREFIX}add @user`")
+        return
+
+    role = ctx.guild.get_role(SLOT_ROLE_ID)
+    if role is None:
+        await ctx.reply("❌ Slot role not found. Check `slot_role_id` in config.json.")
+        return
+
+    if role in member.roles:
+        await ctx.reply(f"ℹ️ {member.mention} already has the **{role.name}** role.")
+        return
+
+    await member.add_roles(role)
+    embed = discord.Embed(
+        title="✅ Role Added",
+        description=f"Added **{role.name}** to {member.mention}",
+        color=discord.Color.green(),
+    )
+    await ctx.send(embed=embed)
+    logger.info(f"Added role {role.name} to {member} by {ctx.author}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def remove(ctx, member: discord.Member = None):
+    """Remove the slot role from a user."""
+    if member is None:
+        await ctx.reply(f"❌ Please mention a user. Usage: `{PREFIX}remove @user`")
+        return
+
+    role = ctx.guild.get_role(SLOT_ROLE_ID)
+    if role is None:
+        await ctx.reply("❌ Slot role not found. Check `slot_role_id` in config.json.")
+        return
+
+    if role not in member.roles:
+        await ctx.reply(f"ℹ️ {member.mention} doesn't have the **{role.name}** role.")
+        return
+
+    await member.remove_roles(role)
+    embed = discord.Embed(
+        title="✅ Role Removed",
+        description=f"Removed **{role.name}** from {member.mention}",
+        color=discord.Color.green(),
+    )
+    await ctx.send(embed=embed)
+    logger.info(f"Removed role {role.name} from {member} by {ctx.author}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def delete(ctx):
+    """Delete the current slot channel."""
+    channel = ctx.channel
+    slot_data = get_slot_data(channel.id)
+
+    # Clean up data files
+    remove_slot_data(channel.id, PINGCOUNT_PATH)
+    remove_slot_data(channel.id, DATA_PATH)
+
+    # Remove roles from the slot owner if found
+    if slot_data:
+        member = ctx.guild.get_member(slot_data["userid"])
+        if member:
+            premium_role = ctx.guild.get_role(PREMIUM_ROLE_ID)
+            if premium_role and premium_role in member.roles:
+                await member.remove_roles(premium_role)
+            slot_role = ctx.guild.get_role(SLOT_ROLE_ID)
+            if slot_role and slot_role in member.roles:
+                await member.remove_roles(slot_role)
+
+    # Log before deleting
+    log_embed = discord.Embed(
+        title="📋 Slot Deleted",
+        description=(
+            f"**Channel:** #{channel.name}\n"
+            f"**Deleted by:** {ctx.author.mention}"
+        ),
+        color=discord.Color.dark_red(),
+        timestamp=datetime.datetime.now(),
+    )
+    await send_log(ctx.guild, log_embed)
+    logger.info(f"Slot channel {channel.name} deleted by {ctx.author}")
+
+    try:
+        await channel.delete(reason=f"Slot deleted by {ctx.author}")
+    except discord.Forbidden:
+        await ctx.send("❌ I do not have permission to delete this channel.")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def slotinfo(ctx, channel: discord.TextChannel = None):
+    """View information about a slot."""
+    if channel is None:
+        channel = ctx.channel
+
+    slot = get_slot_data(channel.id)
+    if slot is None:
+        await ctx.reply("❌ No slot data found for this channel.")
+        return
+
+    member = ctx.guild.get_member(slot["userid"])
+    member_str = member.mention if member else f"<@{slot['userid']}> (left server)"
+
+    end_ts = int(slot.get("endtime", 0))
+    created_ts = int(slot.get("created_at", 0))
+    pings_left = slot.get("ping_count", 0)
+    max_pings = slot.get("max_pings", DEFAULT_PING_COUNT)
+
+    embed = discord.Embed(
+        title=f"📊 Slot Info – #{channel.name}",
+        color=0x8A2BE2,
+    )
+    embed.add_field(name="Owner", value=member_str, inline=True)
+    embed.add_field(name="Pings Left", value=f"{pings_left}/{max_pings}", inline=True)
+    embed.add_field(name="Expires", value=f"<t:{end_ts}:R>" if end_ts else "Unknown", inline=True)
+    if created_ts:
+        embed.add_field(name="Created", value=f"<t:{created_ts}:F>", inline=True)
+    embed.set_footer(text=ctx.guild.name)
+    await ctx.send(embed=embed)
+
