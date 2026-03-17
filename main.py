@@ -233,3 +233,88 @@ async def on_command_error(ctx: commands.Context, error):
 async def expire_slots():
     """Check for expired slots every hour and clean them up."""
     data = load_json(PINGCOUNT_PATH)
+    now = datetime.datetime.now().timestamp()
+    expired = []
+    remaining = []
+
+    for entry in data:
+        end_time = entry.get("endtime", 0)
+        if now >= float(end_time):
+            expired.append(entry)
+        else:
+            remaining.append(entry)
+
+    if not expired:
+        return
+
+    save_json(PINGCOUNT_PATH, remaining)
+
+    # Also clean data.json
+    slot_data = load_json(DATA_PATH)
+    expired_channel_ids = {e["channelid"] for e in expired}
+    slot_data = [s for s in slot_data if s.get("channelid") not in expired_channel_ids]
+    save_json(DATA_PATH, slot_data)
+
+    guild = bot.get_guild(GUILD_ID)
+    if not guild:
+        return
+
+    for entry in expired:
+        try:
+            channel = guild.get_channel(entry["channelid"])
+            member = guild.get_member(entry["userid"])
+
+            if member:
+                role = guild.get_role(PREMIUM_ROLE_ID)
+                if role and role in member.roles:
+                    await member.remove_roles(role)
+
+                slot_role = guild.get_role(SLOT_ROLE_ID)
+                if slot_role and slot_role in member.roles:
+                    await member.remove_roles(slot_role)
+
+            if channel:
+                embed = discord.Embed(
+                    title="⏰ Slot Expired",
+                    description=f"This slot has expired and has been locked.",
+                    color=discord.Color.red(),
+                )
+                embed.set_footer(text="Contact staff to renew your slot.")
+                await channel.send(embed=embed)
+                await channel.set_permissions(guild.default_role, send_messages=False)
+                if member:
+                    await channel.set_permissions(member, send_messages=False)
+
+            # Log the expiry
+            log_embed = discord.Embed(
+                title="📋 Slot Expired",
+                description=f"**User:** <@{entry['userid']}>\n**Channel:** <#{entry['channelid']}>",
+                color=discord.Color.orange(),
+                timestamp=datetime.datetime.now(),
+            )
+            await send_log(guild, log_embed)
+            logger.info(f"Slot expired for user {entry['userid']} in channel {entry['channelid']}")
+
+        except Exception as e:
+            logger.error(f"Error expiring slot {entry}: {e}")
+
+
+@expire_slots.before_loop
+async def before_expire():
+    await bot.wait_until_ready()
+
+
+@tasks.loop(hours=24)
+async def reset_pings():
+    """Reset ping counts for all slots every 24 hours."""
+    data = load_json(PINGCOUNT_PATH)
+    if not data:
+        return
+
+    for entry in data:
+        entry["ping_count"] = entry.get("max_pings", DEFAULT_PING_COUNT)
+
+    save_json(PINGCOUNT_PATH, data)
+    logger.info("Ping counts reset for all slots.")
+
+
