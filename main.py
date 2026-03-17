@@ -513,3 +513,198 @@ async def create(
     await send_log(ctx.guild, log_embed)
     logger.info(f"Slot created for {member} in {channel.name} by {ctx.author}")
 
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def renew(
+    ctx,
+    member: discord.Member = None,
+    channel: discord.TextChannel = None,
+    yoyo: int = None,
+    cx: str = None,
+):
+    """Renew an existing slot with a new duration."""
+    if member is None:
+        await ctx.reply(f"❌ Please mention a user. Usage: `{PREFIX}renew @user #channel 1 d`")
+        return
+
+    if channel is None:
+        await ctx.reply(f"❌ Please mention a channel. Usage: `{PREFIX}renew @user #channel 1 d`")
+        return
+
+    if yoyo is None or cx is None:
+        await ctx.reply(f"❌ Invalid format. Usage: `{PREFIX}renew @user #channel 1 d`")
+        return
+
+    if cx.lower() not in ("d", "m"):
+        await ctx.reply("❌ Duration type must be `d` (days) or `m` (months).")
+        return
+
+    # Calculate new end time
+    if cx.lower() == "d":
+        end_timestamp = int((yoyo * 24 * 60 * 60) + datetime.datetime.now().timestamp())
+    else:
+        end_timestamp = int((yoyo * 30 * 24 * 60 * 60) + datetime.datetime.now().timestamp())
+
+    # Update permissions
+    await channel.set_permissions(
+        member, view_channel=True, send_messages=True, mention_everyone=True
+    )
+
+    # Assign roles
+    premium_role = discord.utils.get(ctx.guild.roles, id=PREMIUM_ROLE_ID)
+    if premium_role:
+        await member.add_roles(premium_role)
+
+    slot_role = discord.utils.get(ctx.guild.roles, id=SLOT_ROLE_ID)
+    if slot_role:
+        await member.add_roles(slot_role)
+
+    # Purge old messages
+    await channel.purge(limit=1000)
+
+    # Send rules embed
+    rules_embed = build_rules_embed(ctx.guild)
+    await channel.send(embed=rules_embed)
+
+    # Send renewed slot info
+    duration_str = f"{yoyo} day{'s' if yoyo != 1 else ''}" if cx.lower() == "d" else f"{yoyo} month{'s' if yoyo != 1 else ''}"
+    info_embed = discord.Embed(
+        title="🔄 Slot Renewed",
+        description=(
+            f"**Slot Owner:** {member.mention}\n"
+            f"**New Duration:** {duration_str}\n"
+            f"**Expires:** <t:{end_timestamp}:R> (<t:{end_timestamp}:F>)"
+        ),
+        color=0x8A2BE2,
+    )
+    info_embed.set_footer(text=ctx.guild.name)
+    if member.avatar:
+        info_embed.set_author(name=str(member), icon_url=member.avatar.url)
+    else:
+        info_embed.set_author(name=str(member))
+    await channel.send(embed=info_embed)
+
+    # Update data files
+    # Update pingcount.json
+    ping_data = load_json(PINGCOUNT_PATH)
+    updated = False
+    for entry in ping_data:
+        if entry.get("channelid") == channel.id:
+            entry["endtime"] = end_timestamp
+            entry["userid"] = member.id
+            entry["ping_count"] = entry.get("max_pings", DEFAULT_PING_COUNT)
+            updated = True
+            break
+    if not updated:
+        ping_data.append({
+            "endtime": end_timestamp,
+            "userid": member.id,
+            "channelid": channel.id,
+            "ping_count": DEFAULT_PING_COUNT,
+            "max_pings": DEFAULT_PING_COUNT,
+            "created_at": int(datetime.datetime.now().timestamp()),
+            "created_by": ctx.author.id,
+        })
+    save_json(PINGCOUNT_PATH, ping_data)
+
+    # Update data.json
+    slot_data = load_json(DATA_PATH)
+    updated = False
+    for entry in slot_data:
+        if entry.get("channelid") == channel.id:
+            entry["endtime"] = end_timestamp
+            entry["userid"] = member.id
+            updated = True
+            break
+    if not updated:
+        slot_data.append({
+            "endtime": end_timestamp,
+            "userid": member.id,
+            "channelid": channel.id,
+        })
+    save_json(DATA_PATH, slot_data)
+
+    await ctx.reply(f"✅ Successfully renewed slot {channel.mention} for {member.mention}")
+
+    # Log
+    log_embed = discord.Embed(
+        title="📋 Slot Renewed",
+        description=(
+            f"**User:** {member.mention}\n"
+            f"**Channel:** {channel.mention}\n"
+            f"**New Duration:** {duration_str}\n"
+            f"**Renewed by:** {ctx.author.mention}"
+        ),
+        color=discord.Color.blue(),
+        timestamp=datetime.datetime.now(),
+    )
+    await send_log(ctx.guild, log_embed)
+    logger.info(f"Slot renewed for {member} in {channel.name} by {ctx.author}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def revoke(ctx, member: discord.Member = None, channel: discord.TextChannel = None):
+    """Revoke a user's slot."""
+    if member is None:
+        await ctx.reply(f"❌ Please mention a user. Usage: `{PREFIX}revoke @user #channel`")
+        return
+
+    if channel is None:
+        await ctx.reply(f"❌ Please mention a channel. Usage: `{PREFIX}revoke @user #channel`")
+        return
+
+    # Check if slot exists in database
+    ping_data = load_json(PINGCOUNT_PATH)
+    slot_exists = any(entry.get("channelid") == channel.id for entry in ping_data)
+
+    if not slot_exists:
+        await ctx.reply("❌ This slot was not found in the database.")
+        return
+
+    # Remove permissions
+    await channel.set_permissions(member, send_messages=False, mention_everyone=False)
+
+    # Remove roles
+    premium_role = discord.utils.get(ctx.guild.roles, id=PREMIUM_ROLE_ID)
+    if premium_role and premium_role in member.roles:
+        await member.remove_roles(premium_role)
+
+    slot_role = discord.utils.get(ctx.guild.roles, id=SLOT_ROLE_ID)
+    if slot_role and slot_role in member.roles:
+        await member.remove_roles(slot_role)
+
+    # Remove from data files
+    remove_slot_data(channel.id, PINGCOUNT_PATH)
+    remove_slot_data(channel.id, DATA_PATH)
+
+    # Send revoke notice in channel
+    embed = discord.Embed(
+        title="🚫 Slot Revoked",
+        description=f"This slot has been revoked from {member.mention}.",
+        color=discord.Color.red(),
+    )
+    embed.set_footer(text=f"Revoked by {ctx.author.display_name}")
+    await channel.send(embed=embed)
+
+    await ctx.reply(f"✅ Successfully revoked slot {channel.mention} from {member.mention}")
+
+    # Log
+    log_embed = discord.Embed(
+        title="📋 Slot Revoked",
+        description=(
+            f"**User:** {member.mention}\n"
+            f"**Channel:** {channel.mention}\n"
+            f"**Revoked by:** {ctx.author.mention}"
+        ),
+        color=discord.Color.red(),
+        timestamp=datetime.datetime.now(),
+    )
+    await send_log(ctx.guild, log_embed)
+    logger.info(f"Slot revoked for {member} in {channel.name} by {ctx.author}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def hold(ctx):
