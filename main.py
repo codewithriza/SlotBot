@@ -173,3 +173,63 @@ def build_rules_embed(guild: discord.Guild) -> discord.Embed:
 # ─── Events ──────────────────────────────────────────────────────────────────
 @bot.event
 async def on_ready():
+    print(BANNER)
+    logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    logger.info(f"Connected to {len(bot.guilds)} guild(s)")
+    logger.info(f"Command prefix: {PREFIX}")
+
+    # Start background tasks
+    if not expire_slots.is_running():
+        expire_slots.start()
+    if not reset_pings.is_running():
+        reset_pings.start()
+
+    # Sync slash commands
+    try:
+        synced = await bot.tree.sync()
+        logger.info(f"Synced {len(synced)} slash command(s)")
+    except Exception as e:
+        logger.error(f"Failed to sync slash commands: {e}")
+
+
+@bot.event
+async def on_command_error(ctx: commands.Context, error):
+    """Global error handler for prefix commands."""
+    if isinstance(error, commands.MissingRole):
+        embed = discord.Embed(
+            title="❌ Permission Denied",
+            description="You do not have the required role to use this command.",
+            color=discord.Color.red(),
+        )
+        await ctx.send(embed=embed, delete_after=10)
+    elif isinstance(error, commands.MissingRequiredArgument):
+        embed = discord.Embed(
+            title="❌ Missing Argument",
+            description=f"Missing required argument: `{error.param.name}`\nUse `{PREFIX}help` for command usage.",
+            color=discord.Color.red(),
+        )
+        await ctx.send(embed=embed, delete_after=10)
+    elif isinstance(error, commands.BadArgument):
+        embed = discord.Embed(
+            title="❌ Invalid Argument",
+            description=f"Invalid argument provided.\nUse `{PREFIX}help` for command usage.",
+            color=discord.Color.red(),
+        )
+        await ctx.send(embed=embed, delete_after=10)
+    elif isinstance(error, commands.CommandNotFound):
+        pass  # Silently ignore unknown commands
+    else:
+        logger.error(f"Unhandled error in {ctx.command}: {error}", exc_info=error)
+        embed = discord.Embed(
+            title="⚠️ Error",
+            description="An unexpected error occurred. Please try again later.",
+            color=discord.Color.red(),
+        )
+        await ctx.send(embed=embed, delete_after=10)
+
+
+# ─── Background Tasks ────────────────────────────────────────────────────────
+@tasks.loop(hours=1)
+async def expire_slots():
+    """Check for expired slots every hour and clean them up."""
+    data = load_json(PINGCOUNT_PATH)
