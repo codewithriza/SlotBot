@@ -318,3 +318,198 @@ async def reset_pings():
     logger.info("Ping counts reset for all slots.")
 
 
+@reset_pings.before_loop
+async def before_reset_pings():
+    await bot.wait_until_ready()
+
+
+# ─── Help Command ────────────────────────────────────────────────────────────
+@bot.command()
+async def help(ctx):
+    """Display the help menu with all available commands."""
+    embed = discord.Embed(
+        title="🎰 SlotBot Help Menu",
+        description="Here are all the available commands:",
+        color=0x8A2BE2,
+    )
+
+    # Staff commands
+    staff_cmds = (
+        f"**`{PREFIX}create @user <duration> <d/m> <pings> <category1/category2> [name]`**\n"
+        f"└ Create a new slot for a user\n\n"
+        f"**`{PREFIX}renew @user #channel <duration> <d/m>`**\n"
+        f"└ Renew an existing slot\n\n"
+        f"**`{PREFIX}revoke @user #channel`**\n"
+        f"└ Revoke a user's slot\n\n"
+        f"**`{PREFIX}hold`**\n"
+        f"└ Put the current slot on hold\n\n"
+        f"**`{PREFIX}unhold`**\n"
+        f"└ Remove hold from the current slot\n\n"
+        f"**`{PREFIX}add @user`**\n"
+        f"└ Add a user to the slot role\n\n"
+        f"**`{PREFIX}remove @user`**\n"
+        f"└ Remove a user from the slot role\n\n"
+        f"**`{PREFIX}delete`**\n"
+        f"└ Delete the current slot channel\n\n"
+        f"**`{PREFIX}slotinfo [#channel]`**\n"
+        f"└ View information about a slot\n\n"
+        f"**`{PREFIX}slots`**\n"
+        f"└ List all active slots"
+    )
+    embed.add_field(name="🛡️ Staff Commands", value=staff_cmds, inline=False)
+
+    # User commands
+    user_cmds = (
+        f"**`{PREFIX}ping <@everyone/@here>`**\n"
+        f"└ Ping in your slot channel\n\n"
+        f"**`{PREFIX}nuke`**\n"
+        f"└ Clear messages in your slot channel\n\n"
+        f"**`{PREFIX}myslot`**\n"
+        f"└ View your slot information\n\n"
+        f"**`{PREFIX}stats`**\n"
+        f"└ View bot statistics"
+    )
+    embed.add_field(name="👤 User Commands", value=user_cmds, inline=False)
+
+    if ctx.guild and ctx.guild.icon:
+        embed.set_thumbnail(url=ctx.guild.icon.url)
+    embed.set_footer(text=f"SlotBot • Prefix: {PREFIX} • Made by @codewithriza")
+
+    await ctx.send(embed=embed, delete_after=60)
+
+
+# ─── Staff Commands ──────────────────────────────────────────────────────────
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def create(
+    ctx,
+    member: discord.Member = None,
+    yoyo: int = None,
+    cx: str = None,
+    ping_count: int = None,
+    category: str = "category1",
+    *,
+    name: str = None,
+):
+    """Create a new slot for a user."""
+    if member is None:
+        await ctx.reply("❌ Please mention a user. Usage: `{0}create @user 1 d 3 category1 Slot Name`".format(PREFIX))
+        return
+
+    if yoyo is None or cx is None:
+        await ctx.reply("❌ Invalid format. Usage: `{0}create @user 1 d 3 category1 Slot Name`".format(PREFIX))
+        return
+
+    if cx.lower() not in ("d", "m"):
+        await ctx.reply("❌ Duration type must be `d` (days) or `m` (months).")
+        return
+
+    if ping_count is None:
+        ping_count = DEFAULT_PING_COUNT
+
+    if category.lower() not in ("category1", "category2"):
+        await ctx.reply("❌ Invalid category. Choose `category1` or `category2`.")
+        return
+
+    category_id = CATEGORY_ID_1 if category.lower() == "category1" else CATEGORY_ID_2
+
+    if name is None:
+        name = member.display_name
+
+    # Calculate end time
+    if cx.lower() == "d":
+        end_timestamp = int((yoyo * 24 * 60 * 60) + datetime.datetime.now().timestamp())
+    else:  # months
+        end_timestamp = int((yoyo * 30 * 24 * 60 * 60) + datetime.datetime.now().timestamp())
+
+    # Set up channel permissions
+    overwrites = {
+        ctx.guild.default_role: discord.PermissionOverwrite(
+            view_channel=True, send_messages=False, mention_everyone=False
+        ),
+        member: discord.PermissionOverwrite(
+            view_channel=True, send_messages=True, mention_everyone=True
+        ),
+    }
+
+    # Get category
+    cat = discord.utils.get(ctx.guild.categories, id=category_id)
+    if cat is None:
+        await ctx.reply("❌ Category not found. Please check your `config.json` category IDs.")
+        return
+
+    # Create the channel
+    channel = await ctx.guild.create_text_channel(name, category=cat, overwrites=overwrites)
+
+    # Assign roles
+    premium_role = discord.utils.get(ctx.guild.roles, id=PREMIUM_ROLE_ID)
+    if premium_role:
+        await member.add_roles(premium_role)
+
+    slot_role = discord.utils.get(ctx.guild.roles, id=SLOT_ROLE_ID)
+    if slot_role:
+        await member.add_roles(slot_role)
+
+    # Send rules embed
+    rules_embed = build_rules_embed(ctx.guild)
+    await channel.send(embed=rules_embed)
+
+    # Send slot info embed
+    duration_str = f"{yoyo} day{'s' if yoyo != 1 else ''}" if cx.lower() == "d" else f"{yoyo} month{'s' if yoyo != 1 else ''}"
+    info_embed = discord.Embed(
+        title="🎰 Slot Created",
+        description=(
+            f"**Slot Owner:** {member.mention}\n"
+            f"**Duration:** {duration_str}\n"
+            f"**Expires:** <t:{end_timestamp}:R> (<t:{end_timestamp}:F>)\n"
+            f"**Ping Count:** {ping_count}\n"
+            f"**Category:** {category}"
+        ),
+        color=0x8A2BE2,
+    )
+    info_embed.set_footer(text=ctx.guild.name)
+    if member.avatar:
+        info_embed.set_author(name=str(member), icon_url=member.avatar.url)
+    else:
+        info_embed.set_author(name=str(member))
+    await channel.send(embed=info_embed)
+
+    # Save slot data
+    slot_entry = {
+        "endtime": end_timestamp,
+        "userid": member.id,
+        "channelid": channel.id,
+        "ping_count": ping_count,
+        "max_pings": ping_count,
+        "created_at": int(datetime.datetime.now().timestamp()),
+        "created_by": ctx.author.id,
+    }
+
+    # Save to pingcount.json
+    ping_data = load_json(PINGCOUNT_PATH)
+    ping_data.append(slot_entry)
+    save_json(PINGCOUNT_PATH, ping_data)
+
+    # Save to data.json
+    data = load_json(DATA_PATH)
+    data.append(slot_entry)
+    save_json(DATA_PATH, data)
+
+    await ctx.reply(f"✅ Successfully created slot {channel.mention} for {member.mention}")
+
+    # Log
+    log_embed = discord.Embed(
+        title="📋 Slot Created",
+        description=(
+            f"**User:** {member.mention}\n"
+            f"**Channel:** {channel.mention}\n"
+            f"**Duration:** {duration_str}\n"
+            f"**Pings:** {ping_count}\n"
+            f"**Created by:** {ctx.author.mention}"
+        ),
+        color=discord.Color.green(),
+        timestamp=datetime.datetime.now(),
+    )
+    await send_log(ctx.guild, log_embed)
+    logger.info(f"Slot created for {member} in {channel.name} by {ctx.author}")
+
