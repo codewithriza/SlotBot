@@ -9,5 +9,6 @@
     "slot_role_id": 0,
     "log_channel_id": 0,
     "default_ping_count": 3,
-    "ping_reset_hours": 24
+    "ping_reset_hours": 24,
+    "ticket_category_id": 0
 }

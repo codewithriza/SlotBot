@@ -59,6 +59,8 @@
 | 📢 **Announcements** | Staff can send formatted announcement embeds |
 | 🏠 **Server Info** | Detailed server information display |
 | ⏱️ **Uptime Tracking** | Real-time bot uptime monitoring |
+| 🎫 **Ticket System** | Create support tickets with buttons, auto-transcripts on close, DM delivery |
+| 🎟️ **Redeem Codes** | Generate redeemable codes that auto-create slots with set duration/pings |
 
 ---
 
@@ -156,6 +158,7 @@ Edit `config.json` with your values:
 | `log_channel_id` | Audit log channel ID | Optional |
 | `default_ping_count` | Default pings per slot | Optional |
 | `ping_reset_hours` | Hours between ping resets | Optional |
+| `ticket_category_id` | Category ID for ticket channels | Optional |
 
 ### 🔐 Token Security
 
@@ -198,6 +201,11 @@ python3 main.py
 | `,slots` | List all slots | `,slots` |
 | `,announce` | Send announcement | `,announce Sale today!` |
 | `,setup` | Setup wizard | `,setup` |
+| `,ticket` | Send ticket panel with button | `,ticket` |
+| `,closeticket` | Close current ticket | `,closeticket` |
+| `,createredeem` | Create a redeem code | `,createredeem 7 d 3 category1 1` |
+| `,redeems` | List all redeem codes | `,redeems` |
+| `,deleteredeem` | Delete a redeem code | `,deleteredeem CODE` |
 
 ### 👤 User Commands
 
@@ -211,6 +219,7 @@ python3 main.py
 | `,serverinfo` | Server information | `,serverinfo` |
 | `,leaderboard` | Slot leaderboard | `,leaderboard` |
 | `,history` | Recent activity | `,history` |
+| `,redeem` | Redeem a code for a slot | `,redeem XXXX-XXXX-XXXX` |
 
 ### ⚡ Slash Commands
 
@@ -235,6 +244,8 @@ SlotBot/
 ├── pingcount.json       # Ping count tracking
 ├── blacklist.json       # Blacklisted users
 ├── history.json         # Action history log
+├── tickets.json         # Open ticket tracking
+├── redeems.json         # Redeem codes storage
 ├── slotbot.log          # Runtime log file
 ├── requirements.txt     # Python dependencies
 ├── .gitignore           # Git ignore rules

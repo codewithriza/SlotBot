@@ -12,6 +12,8 @@ import os
 import asyncio
 import logging
 import time
+import random
+import string
 from typing import Optional
 from colorama import Fore, Style
 
@@ -32,6 +34,8 @@ DATA_PATH = "data.json"
 PINGCOUNT_PATH = "pingcount.json"
 BLACKLIST_PATH = "blacklist.json"
 HISTORY_PATH = "history.json"
+TICKETS_PATH = "tickets.json"
+REDEEMS_PATH = "redeems.json"
 
 
 def load_json(path, default=None):
@@ -66,6 +70,7 @@ SLOT_ROLE_ID = int(config.get("slot_role_id", 0))
 LOG_CHANNEL_ID = int(config.get("log_channel_id", 0))
 DEFAULT_PING_COUNT = int(config.get("default_ping_count", 3))
 PING_RESET_HOURS = int(config.get("ping_reset_hours", 24))
+TICKET_CATEGORY_ID = int(config.get("ticket_category_id", 0))
 
 # ─── Bot Setup ───────────────────────────────────────────────────────────────
 intents = discord.Intents.all()
@@ -160,7 +165,7 @@ async def on_ready():
     print(BANNER)
     logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
     logger.info(f"Connected to {len(bot.guilds)} guild(s) | Prefix: {PREFIX}")
-    for p in [DATA_PATH, PINGCOUNT_PATH, BLACKLIST_PATH, HISTORY_PATH]:
+    for p in [DATA_PATH, PINGCOUNT_PATH, BLACKLIST_PATH, HISTORY_PATH, TICKETS_PATH, REDEEMS_PATH]:
         if not os.path.exists(p): save_json(p, [])
     if not expire_slots.is_running(): expire_slots.start()
     if not reset_pings.is_running(): reset_pings.start()
@@ -889,6 +894,292 @@ async def slash_leaderboard(interaction: discord.Interaction):
         lines.append(f"{m} {ms} - {days} days left")
     embed = discord.Embed(title="Slot Leaderboard", description=chr(10).join(lines) if lines else "No active slots.", color=0xFFD700)
     await interaction.response.send_message(embed=embed)
+
+
+# ─── Ticket System ───────────────────────────────────────────────────────────
+class TicketCloseButton(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Close Ticket", style=discord.ButtonStyle.red, emoji="🔒", custom_id="close_ticket")
+    async def close_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        staff_role = interaction.guild.get_role(STAFF_ROLE_ID)
+        is_staff = staff_role and staff_role in interaction.user.roles
+        tickets = load_json(TICKETS_PATH)
+        ticket = next((t for t in tickets if t.get("channelid") == interaction.channel.id), None)
+        is_owner = ticket and ticket.get("userid") == interaction.user.id
+        if not is_staff and not is_owner:
+            return await interaction.response.send_message("❌ Only staff or the ticket creator can close this.", ephemeral=True)
+        await interaction.response.send_message(embed=discord.Embed(title="🔒 Closing Ticket", description="Saving transcript and closing in 5 seconds...", color=discord.Color.orange()))
+        # Generate transcript
+        messages = []
+        async for msg in interaction.channel.history(limit=200, oldest_first=True):
+            ts = msg.created_at.strftime("%Y-%m-%d %H:%M")
+            messages.append(f"[{ts}] {msg.author.display_name}: {msg.content}")
+        transcript = "\n".join(messages)
+        # Try to DM transcript to ticket creator
+        if ticket:
+            creator = interaction.guild.get_member(ticket["userid"])
+            if creator:
+                try:
+                    dm_embed = discord.Embed(title=f"📋 Ticket Transcript – #{interaction.channel.name}", description=f"Your ticket in **{interaction.guild.name}** has been closed.", color=0x8A2BE2)
+                    await creator.send(embed=dm_embed)
+                    if len(transcript) <= 1990:
+                        await creator.send(f"```\n{transcript}\n```")
+                    else:
+                        await creator.send(f"```\n{transcript[:1990]}\n```\n*(truncated)*")
+                except discord.Forbidden:
+                    pass
+            # Remove from tickets data
+            tickets = [t for t in tickets if t.get("channelid") != interaction.channel.id]
+            save_json(TICKETS_PATH, tickets)
+        # Log
+        await send_log(interaction.guild, discord.Embed(title="📋 Ticket Closed", description=f"**Channel:** #{interaction.channel.name}\n**Closed by:** {interaction.user.mention}", color=discord.Color.orange(), timestamp=datetime.datetime.now()))
+        add_to_history("ticket_closed", userid=interaction.user.id, channelid=interaction.channel.id)
+        await asyncio.sleep(5)
+        try:
+            await interaction.channel.delete(reason=f"Ticket closed by {interaction.user}")
+        except discord.Forbidden:
+            await interaction.channel.send("❌ Cannot delete channel – missing permissions.")
+
+
+class TicketCreateButton(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="Create Ticket", style=discord.ButtonStyle.green, emoji="🎫", custom_id="create_ticket")
+    async def create_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Check if user already has an open ticket
+        tickets = load_json(TICKETS_PATH)
+        existing = next((t for t in tickets if t.get("userid") == interaction.user.id), None)
+        if existing:
+            ch = interaction.guild.get_channel(existing["channelid"])
+            if ch:
+                return await interaction.response.send_message(f"❌ You already have an open ticket: {ch.mention}", ephemeral=True)
+            else:
+                tickets = [t for t in tickets if t.get("userid") != interaction.user.id]
+                save_json(TICKETS_PATH, tickets)
+        # Create ticket channel
+        cat = discord.utils.get(interaction.guild.categories, id=TICKET_CATEGORY_ID) if TICKET_CATEGORY_ID else None
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True, embed_links=True),
+            interaction.guild.me: discord.PermissionOverwrite(view_channel=True, send_messages=True),
+        }
+        staff_role = interaction.guild.get_role(STAFF_ROLE_ID)
+        if staff_role:
+            overwrites[staff_role] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
+        ch = await interaction.guild.create_text_channel(f"ticket-{interaction.user.name}", category=cat, overwrites=overwrites)
+        # Save ticket
+        tickets.append({"userid": interaction.user.id, "channelid": ch.id, "created_at": int(datetime.datetime.now().timestamp())})
+        save_json(TICKETS_PATH, tickets)
+        # Send welcome embed
+        e = discord.Embed(title="🎫 Ticket Opened", description=f"Welcome {interaction.user.mention}!\n\nPlease describe your issue or request.\nA staff member will assist you shortly.\n\n**Click the button below to close this ticket.**", color=0x8A2BE2)
+        e.set_footer(text=f"Ticket created by {interaction.user.display_name}")
+        await ch.send(embed=e, view=TicketCloseButton())
+        await ch.send(f"{interaction.user.mention} {'| ' + staff_role.mention if staff_role else ''}")
+        await interaction.response.send_message(f"✅ Ticket created: {ch.mention}", ephemeral=True)
+        add_to_history("ticket_created", userid=interaction.user.id, channelid=ch.id)
+        await send_log(interaction.guild, discord.Embed(title="📋 Ticket Created", description=f"**User:** {interaction.user.mention}\n**Channel:** {ch.mention}", color=discord.Color.green(), timestamp=datetime.datetime.now()))
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def ticket(ctx):
+    """Send a ticket panel with a create button."""
+    e = discord.Embed(title="🎫 Support Tickets", description="Need help? Want to buy a slot? Have an issue?\n\n**Click the button below to create a ticket!**\n\nA private channel will be created for you.", color=0x8A2BE2)
+    if ctx.guild.icon:
+        e.set_thumbnail(url=ctx.guild.icon.url)
+    e.set_footer(text=f"{ctx.guild.name} • Ticket System")
+    await ctx.message.delete()
+    await ctx.send(embed=e, view=TicketCreateButton())
+    logger.info(f"Ticket panel sent by {ctx.author}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def closeticket(ctx):
+    """Close the current ticket channel."""
+    tickets = load_json(TICKETS_PATH)
+    ticket = next((t for t in tickets if t.get("channelid") == ctx.channel.id), None)
+    if not ticket:
+        return await ctx.reply("❌ This is not a ticket channel.")
+    # Generate transcript
+    messages = []
+    async for msg in ctx.channel.history(limit=200, oldest_first=True):
+        ts = msg.created_at.strftime("%Y-%m-%d %H:%M")
+        messages.append(f"[{ts}] {msg.author.display_name}: {msg.content}")
+    transcript = "\n".join(messages)
+    creator = ctx.guild.get_member(ticket["userid"])
+    if creator:
+        try:
+            dm_embed = discord.Embed(title=f"📋 Ticket Transcript – #{ctx.channel.name}", description=f"Your ticket in **{ctx.guild.name}** has been closed by staff.", color=0x8A2BE2)
+            await creator.send(embed=dm_embed)
+            if len(transcript) <= 1990:
+                await creator.send(f"```\n{transcript}\n```")
+            else:
+                await creator.send(f"```\n{transcript[:1990]}\n```\n*(truncated)*")
+        except discord.Forbidden:
+            pass
+    tickets = [t for t in tickets if t.get("channelid") != ctx.channel.id]
+    save_json(TICKETS_PATH, tickets)
+    add_to_history("ticket_closed", userid=ctx.author.id, channelid=ctx.channel.id)
+    await send_log(ctx.guild, discord.Embed(title="📋 Ticket Closed", description=f"**Channel:** #{ctx.channel.name}\n**Closed by:** {ctx.author.mention}", color=discord.Color.orange(), timestamp=datetime.datetime.now()))
+    await ctx.send(embed=discord.Embed(title="🔒 Closing Ticket", description="Closing in 5 seconds...", color=discord.Color.orange()))
+    await asyncio.sleep(5)
+    try:
+        await ctx.channel.delete(reason=f"Ticket closed by {ctx.author}")
+    except discord.Forbidden:
+        await ctx.send("❌ Cannot delete – missing permissions.")
+
+
+# ─── Redeem System ───────────────────────────────────────────────────────────
+def generate_redeem_code(length=12):
+    """Generate a random redeem code."""
+    chars = string.ascii_uppercase + string.digits
+    code = "-".join("".join(random.choices(chars, k=4)) for _ in range(length // 4))
+    return code
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def createredeem(ctx, duration: int = None, unit: str = None, pings: int = None, category: str = "category1", uses: int = 1):
+    """Create a redeem code for a slot. Usage: ,createredeem 7 d 3 category1 1"""
+    if not duration or not unit:
+        return await ctx.reply(f"❌ Usage: `{PREFIX}createredeem 7 d 3 category1 1`\n`duration unit pings category uses`")
+    if unit.lower() not in ("d", "m"):
+        return await ctx.reply("❌ Unit must be `d` (days) or `m` (months).")
+    if pings is None:
+        pings = DEFAULT_PING_COUNT
+    if category.lower() not in ("category1", "category2"):
+        return await ctx.reply("❌ Category must be `category1` or `category2`.")
+    code = generate_redeem_code()
+    redeems = load_json(REDEEMS_PATH)
+    redeems.append({
+        "code": code,
+        "duration": duration,
+        "unit": unit.lower(),
+        "pings": pings,
+        "category": category.lower(),
+        "max_uses": uses,
+        "uses": 0,
+        "created_by": ctx.author.id,
+        "created_at": int(datetime.datetime.now().timestamp()),
+        "redeemed_by": [],
+    })
+    save_json(REDEEMS_PATH, redeems)
+    dur_str = f"{duration} day{'s' if duration != 1 else ''}" if unit.lower() == "d" else f"{duration} month{'s' if duration != 1 else ''}"
+    e = discord.Embed(title="🎟️ Redeem Code Created", color=discord.Color.green())
+    e.add_field(name="Code", value=f"```{code}```", inline=False)
+    e.add_field(name="Duration", value=dur_str, inline=True)
+    e.add_field(name="Pings", value=str(pings), inline=True)
+    e.add_field(name="Category", value=category, inline=True)
+    e.add_field(name="Max Uses", value=str(uses), inline=True)
+    e.set_footer(text=f"Created by {ctx.author.display_name}")
+    await ctx.reply(embed=e)
+    add_to_history("redeem_created", staff=ctx.author.id, code=code, duration=dur_str)
+    await send_log(ctx.guild, discord.Embed(title="📋 Redeem Code Created", description=f"**Code:** `{code}`\n**Duration:** {dur_str}\n**Uses:** {uses}\n**By:** {ctx.author.mention}", color=discord.Color.green(), timestamp=datetime.datetime.now()))
+    logger.info(f"Redeem code {code} created by {ctx.author}")
+
+
+@bot.command()
+async def redeem(ctx, code: str = None):
+    """Redeem a code to get a slot. Usage: ,redeem CODE"""
+    if not code:
+        return await ctx.reply(f"❌ Usage: `{PREFIX}redeem YOUR-CODE-HERE`")
+    if is_blacklisted(ctx.author.id):
+        return await ctx.reply("❌ You are **blacklisted** and cannot redeem codes.")
+    existing = get_user_slot(ctx.author.id)
+    if existing:
+        return await ctx.reply(f"⚠️ You already have a slot in <#{existing['channelid']}>.")
+    redeems = load_json(REDEEMS_PATH)
+    redeem_entry = None
+    for r in redeems:
+        if r["code"].upper() == code.upper():
+            redeem_entry = r
+            break
+    if not redeem_entry:
+        return await ctx.reply("❌ Invalid redeem code.")
+    if redeem_entry["uses"] >= redeem_entry["max_uses"]:
+        return await ctx.reply("❌ This code has already been fully redeemed.")
+    if ctx.author.id in redeem_entry.get("redeemed_by", []):
+        return await ctx.reply("❌ You have already used this code.")
+    # Create the slot
+    member = ctx.author
+    duration = redeem_entry["duration"]
+    unit = redeem_entry["unit"]
+    pings = redeem_entry["pings"]
+    category = redeem_entry["category"]
+    cat_id = CATEGORY_ID_1 if category == "category1" else CATEGORY_ID_2
+    end_ts = int((duration * 86400 if unit == "d" else duration * 30 * 86400) + datetime.datetime.now().timestamp())
+    overwrites = {
+        ctx.guild.default_role: discord.PermissionOverwrite(view_channel=True, send_messages=False, mention_everyone=False),
+        member: discord.PermissionOverwrite(view_channel=True, send_messages=True, mention_everyone=True),
+    }
+    cat = discord.utils.get(ctx.guild.categories, id=cat_id)
+    if not cat:
+        return await ctx.reply("❌ Slot category not found. Contact staff.")
+    ch = await ctx.guild.create_text_channel(member.display_name, category=cat, overwrites=overwrites)
+    for rid in [PREMIUM_ROLE_ID, SLOT_ROLE_ID]:
+        r = discord.utils.get(ctx.guild.roles, id=rid)
+        if r: await member.add_roles(r)
+    await ch.send(embed=build_rules_embed(ctx.guild))
+    dur_str = f"{duration} day{'s' if duration != 1 else ''}" if unit == "d" else f"{duration} month{'s' if duration != 1 else ''}"
+    ie = discord.Embed(title="🎟️ Slot Redeemed!", description=f"**Owner:** {member.mention}\n**Duration:** {dur_str}\n**Expires:** <t:{end_ts}:R> (<t:{end_ts}:F>)\n**Pings:** {pings}", color=discord.Color.gold())
+    ie.set_footer(text=ctx.guild.name)
+    if member.avatar: ie.set_author(name=str(member), icon_url=member.avatar.url)
+    else: ie.set_author(name=str(member))
+    await ch.send(embed=ie)
+    entry = {"endtime": end_ts, "userid": member.id, "channelid": ch.id, "ping_count": pings, "max_pings": pings, "created_at": int(datetime.datetime.now().timestamp()), "created_by": member.id, "warnings": 0}
+    for p in [PINGCOUNT_PATH, DATA_PATH]:
+        d = load_json(p); d.append(entry); save_json(p, d)
+    # Update redeem usage
+    redeem_entry["uses"] += 1
+    redeem_entry["redeemed_by"].append(ctx.author.id)
+    save_json(REDEEMS_PATH, redeems)
+    await ctx.reply(f"✅ Code redeemed! Your slot: {ch.mention}")
+    add_to_history("redeemed", userid=member.id, channelid=ch.id, code=code.upper(), duration=dur_str)
+    await send_log(ctx.guild, discord.Embed(title="📋 Code Redeemed", description=f"**User:** {member.mention}\n**Code:** `{code.upper()}`\n**Channel:** {ch.mention}\n**Duration:** {dur_str}", color=discord.Color.gold(), timestamp=datetime.datetime.now()))
+    logger.info(f"Code {code.upper()} redeemed by {member}")
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def redeems(ctx):
+    """List all redeem codes."""
+    data = load_json(REDEEMS_PATH)
+    if not data:
+        return await ctx.reply("ℹ️ No redeem codes exist.")
+    lines = []
+    for i, r in enumerate(data, 1):
+        status = "✅" if r["uses"] < r["max_uses"] else "❌"
+        dur = f"{r['duration']}{'d' if r['unit'] == 'd' else 'm'}"
+        lines.append(f"`{i}.` {status} `{r['code']}` — {dur} | {r['uses']}/{r['max_uses']} uses | {r['pings']} pings")
+    e = discord.Embed(title=f"🎟️ Redeem Codes ({len(data)})", description="\n".join(lines), color=0x8A2BE2)
+    e.set_footer(text="✅ = Available | ❌ = Fully used")
+    await ctx.send(embed=e)
+
+
+@bot.command()
+@commands.has_role(STAFF_ROLE_ID)
+async def deleteredeem(ctx, code: str = None):
+    """Delete a redeem code."""
+    if not code:
+        return await ctx.reply(f"❌ Usage: `{PREFIX}deleteredeem CODE`")
+    data = load_json(REDEEMS_PATH)
+    new_data = [r for r in data if r["code"].upper() != code.upper()]
+    if len(new_data) == len(data):
+        return await ctx.reply("❌ Code not found.")
+    save_json(REDEEMS_PATH, new_data)
+    await ctx.reply(f"✅ Redeem code `{code.upper()}` deleted.")
+    logger.info(f"Redeem code {code.upper()} deleted by {ctx.author}")
+
+
+# Register persistent views on startup
+@bot.event
+async def on_connect():
+    bot.add_view(TicketCreateButton())
+    bot.add_view(TicketCloseButton())
 
 
 # ─── Run ─────────────────────────────────────────────────────────────────────
