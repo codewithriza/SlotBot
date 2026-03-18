@@ -2,7 +2,7 @@
 
 # 🎰 SlotBot
 
-### A powerful Discord bot for seamless slot management
+### The ultimate Discord bot for seamless slot management
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![discord.py](https://img.shields.io/badge/discord.py-2.3+-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discordpy.readthedocs.io)
@@ -23,7 +23,7 @@
 <br/>
 
 [Features](#-features) •
-[Installation](#-installation) •
+[Quick Start](#-quick-start) •
 [Configuration](#-configuration) •
 [Commands](#-commands) •
 [Contributing](#-contributing) •
@@ -39,55 +39,93 @@
 |---------|-------------|
 | 🎰 **Slot Creation** | Create slots with custom durations (days/months), categories, and ping limits |
 | 🔄 **Slot Renewal** | Renew existing slots with new durations seamlessly |
+| ⏳ **Slot Extension** | Extend slot duration without resetting the channel |
+| 🔀 **Slot Transfer** | Transfer slot ownership between users |
 | ⏸️ **Hold / Unhold** | Temporarily freeze slots during investigations |
 | 🚫 **Slot Revocation** | Revoke slots with automatic role & permission cleanup |
-| 📢 **Ping Management** | Configurable ping counts with automatic 24-hour resets |
-| ⏰ **Auto-Expiry** | Background task automatically expires and locks slots |
-| 📊 **Statistics** | View bot stats, active slots, and server metrics |
+| 📢 **Ping Management** | Configurable ping counts with automatic 24-hour resets + cooldowns |
+| ⏰ **Auto-Expiry** | Background task automatically expires and locks slots hourly |
+| ⚠️ **Warning System** | Warn slot owners with DM notifications and tracking |
+| 🚫 **Blacklist System** | Blacklist users from receiving slots with auto-revocation |
+| 📊 **Advanced Statistics** | Detailed stats with progress bars, 24h activity, warnings, and more |
+| 🏆 **Leaderboard** | Rank slots by remaining time with medal display |
+| 📜 **Activity History** | Track all slot actions with timestamps |
 | 📋 **Audit Logging** | All actions logged to a dedicated channel and log file |
-| 🔧 **Slash Commands** | Modern Discord slash commands alongside prefix commands |
+| 🔧 **Setup Wizard** | Interactive first-time configuration command |
+| ⚡ **Slash Commands** | Modern Discord slash commands alongside prefix commands |
 | 🛡️ **Role-Based Access** | Staff-only commands with proper permission checks |
-| ⚠️ **Error Handling** | Graceful error handling with user-friendly messages |
+| ⚠️ **Error Handling** | Graceful error handling with cooldown support |
 | 💣 **Nuke Command** | Clear slot channels while preserving bot embeds |
-| 🔍 **Slot Info** | View detailed information about any slot |
-| 📜 **Auto Rules** | Automatically posts slot rules on creation/renewal |
+| 📢 **Announcements** | Staff can send formatted announcement embeds |
+| 🏠 **Server Info** | Detailed server information display |
+| ⏱️ **Uptime Tracking** | Real-time bot uptime monitoring |
 
 ---
 
-## 📦 Installation
+## 🚀 Quick Start
 
-### Prerequisites
+### Step 1: Create a Discord Bot
 
-- **Python 3.10** or higher
-- A **Discord Bot** token ([create one here](https://discord.com/developers/applications))
-- **Git** installed on your system
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click **"New Application"** → give it a name → click **"Create"**
+3. Go to the **"Bot"** tab → click **"Add Bot"**
+4. Under **"Privileged Gateway Intents"**, enable:
+   - ✅ Presence Intent
+   - ✅ Server Members Intent
+   - ✅ Message Content Intent
+5. Click **"Reset Token"** → copy the token (you'll need it later)
 
-### Quick Start
+### Step 2: Invite the Bot
+
+1. Go to **"OAuth2"** → **"URL Generator"**
+2. Select scopes: `bot`, `applications.commands`
+3. Select permissions: `Administrator`
+4. Copy the generated URL and open it in your browser
+5. Select your server and authorize
+
+### Step 3: Set Up Your Server
+
+Create these in your Discord server:
+- **2 Categories** for slot channels (e.g., "Slots Category 1" and "Slots Category 2")
+- **1 Staff Role** for bot managers
+- **1 Premium/Buyer Role** for slot holders
+- **1 Slot Role** (additional role for slot holders)
+- **1 Log Channel** for audit logs (optional but recommended)
+
+> 💡 **Tip:** Enable Developer Mode in Discord (`Settings → Advanced → Developer Mode`) to copy IDs by right-clicking.
+
+### Step 4: Install & Run
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/codewithriza/SlotBot.git
 cd SlotBot
 
-# 2. Create a virtual environment (recommended)
+# Create a virtual environment (recommended)
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 3. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-# 4. Configure the bot (see Configuration section below)
-nano config.json
-
-# 5. Run the bot
+# Configure the bot (see next section)
+# Then run:
 python3 main.py
 ```
+
+### Step 5: Use the Setup Wizard
+
+Once the bot is running with just the token set, use the **setup wizard** in Discord:
+```
+,setup
+```
+This will interactively ask you for all the IDs and save them to `config.json`!
 
 ---
 
 ## ⚙️ Configuration
 
-Edit `config.json` with your server's values:
+Edit `config.json` with your values:
 
 ```json
 {
@@ -105,40 +143,35 @@ Edit `config.json` with your server's values:
 }
 ```
 
-| Key | Description |
-|-----|-------------|
-| `token` | Your Discord bot token (or use `SLOTBOT_TOKEN` env variable) |
-| `prefix` | Command prefix (default: `,`) |
-| `staffrole` | Role ID for staff members who can manage slots |
-| `premiumeroleid` | Role ID assigned to users with active slots |
-| `guildid` | Your Discord server (guild) ID |
-| `categoryid_1` | Category ID for slot category 1 |
-| `categoryid_2` | Category ID for slot category 2 |
-| `slot_role_id` | Additional role ID for slot holders |
-| `log_channel_id` | Channel ID for audit log messages |
-| `default_ping_count` | Default number of pings per slot (default: `3`) |
-| `ping_reset_hours` | Hours between ping count resets (default: `24`) |
+| Key | Description | Required |
+|-----|-------------|----------|
+| `token` | Your Discord bot token | ✅ |
+| `prefix` | Command prefix (default: `,`) | ✅ |
+| `staffrole` | Staff role ID | ✅ |
+| `premiumeroleid` | Premium/buyer role ID | ✅ |
+| `guildid` | Your server ID | ✅ |
+| `categoryid_1` | First slot category ID | ✅ |
+| `categoryid_2` | Second slot category ID | ✅ |
+| `slot_role_id` | Slot holder role ID | ✅ |
+| `log_channel_id` | Audit log channel ID | Optional |
+| `default_ping_count` | Default pings per slot | Optional |
+| `ping_reset_hours` | Hours between ping resets | Optional |
 
 ### 🔐 Token Security
 
-You can set your bot token in two ways:
+**Option 1:** Set in `config.json` (keep the file private!)
+```json
+{ "token": "your_token_here" }
+```
 
-1. **config.json** – Set the `"token"` field (keep the file private!)
-2. **Environment variable** – Set `SLOTBOT_TOKEN` (recommended for production)
-
+**Option 2:** Environment variable (recommended for production)
 ```bash
-export SLOTBOT_TOKEN="your_bot_token_here"
+export SLOTBOT_TOKEN="your_token_here"
 python3 main.py
 ```
 
 > [!IMPORTANT]
-> **Never commit your bot token to Git!** The `.gitignore` is configured to protect sensitive files, but always double-check before pushing.
-
-### How to Get IDs
-
-1. Enable **Developer Mode** in Discord: `Settings → Advanced → Developer Mode`
-2. **Right-click** on any server, channel, role, or user
-3. Click **"Copy ID"**
+> **Never commit your bot token to Git!** The `.gitignore` is configured to protect sensitive files.
 
 ---
 
@@ -146,28 +179,38 @@ python3 main.py
 
 ### 🛡️ Staff Commands
 
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `,create` | Create a new slot | `,create @user 7 d 3 category1 Slot Name` |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `,create` | Create a new slot | `,create @user 7 d 3 category1 Shop` |
 | `,renew` | Renew an existing slot | `,renew @user #channel 30 d` |
+| `,extend` | Extend slot duration | `,extend @user 7 d` |
+| `,transfer` | Transfer slot ownership | `,transfer @from @to` |
 | `,revoke` | Revoke a user's slot | `,revoke @user #channel` |
-| `,hold` | Put a slot on hold | `,hold` (in slot channel) |
-| `,unhold` | Remove hold from a slot | `,unhold` (in slot channel) |
-| `,add` | Add slot role to a user | `,add @user` |
-| `,remove` | Remove slot role from a user | `,remove @user` |
-| `,delete` | Delete a slot channel | `,delete` (in slot channel) |
+| `,hold` | Put slot on hold | `,hold` |
+| `,unhold` | Remove hold | `,unhold` |
+| `,add` | Add slot role | `,add @user` |
+| `,remove` | Remove slot role | `,remove @user` |
+| `,delete` | Delete slot channel | `,delete` |
+| `,warn` | Warn a slot owner | `,warn @user Inactive` |
+| `,blacklist` | Blacklist a user | `,blacklist @user Scammer` |
+| `,unblacklist` | Remove from blacklist | `,unblacklist @user` |
 | `,slotinfo` | View slot details | `,slotinfo #channel` |
-| `,slots` | List all active slots | `,slots` |
+| `,slots` | List all slots | `,slots` |
+| `,announce` | Send announcement | `,announce Sale today!` |
+| `,setup` | Setup wizard | `,setup` |
 
 ### 👤 User Commands
 
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `,ping` | Ping @everyone/@here in your slot | `,ping everyone` or `,ping here` |
-| `,nuke` | Clear messages in your slot | `,nuke` (in your slot channel) |
-| `,myslot` | View your slot information | `,myslot` |
-| `,stats` | View bot statistics | `,stats` |
-| `,help` | Show the help menu | `,help` |
+| Command | Description | Example |
+|---------|-------------|---------|
+| `,ping` | Ping in your slot | `,ping everyone` |
+| `,nuke` | Clear slot messages | `,nuke` |
+| `,myslot` | View your slot | `,myslot` |
+| `,stats` | Bot statistics | `,stats` |
+| `,uptime` | Bot uptime | `,uptime` |
+| `,serverinfo` | Server information | `,serverinfo` |
+| `,leaderboard` | Slot leaderboard | `,leaderboard` |
+| `,history` | Recent activity | `,history` |
 
 ### ⚡ Slash Commands
 
@@ -176,6 +219,9 @@ python3 main.py
 | `/ping` | Check bot latency |
 | `/slotinfo` | View slot information |
 | `/stats` | View bot statistics |
+| `/myslot` | View your slot |
+| `/serverinfo` | Server information |
+| `/leaderboard` | Slot leaderboard |
 
 ---
 
@@ -183,10 +229,13 @@ python3 main.py
 
 ```
 SlotBot/
-├── main.py              # Main bot file with all commands and logic
-├── config.json          # Bot configuration (IDs, token, settings)
-├── data.json            # Slot expiry data storage
-├── pingcount.json       # Ping count tracking per slot
+├── main.py              # Main bot file with all commands
+├── config.json          # Bot configuration
+├── data.json            # Slot expiry data
+├── pingcount.json       # Ping count tracking
+├── blacklist.json       # Blacklisted users
+├── history.json         # Action history log
+├── slotbot.log          # Runtime log file
 ├── requirements.txt     # Python dependencies
 ├── .gitignore           # Git ignore rules
 ├── .env.example         # Environment variable template
@@ -203,51 +252,55 @@ SlotBot/
 ## 🔧 How It Works
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  Staff runs  │────▶│  Bot creates │────▶│  Channel created │
-│  ,create     │     │  slot entry  │     │  with permissions │
-└─────────────┘     └──────────────┘     └─────────────────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │  Roles added │
-                    │  Rules posted│
-                    │  Info embed  │
-                    └──────────────┘
-                           │
-                           ▼
-              ┌────────────────────────┐
-              │  Background Tasks Run  │
-              │  • Expire check (1hr)  │
-              │  • Ping reset (24hr)   │
-              └────────────────────────┘
+┌─────────────────┐     ┌──────────────────┐     ┌───────────────────┐
+│  Staff runs      │────▶│  Bot validates   │────▶│  Channel created  │
+│  ,create         │     │  & checks blacklist│   │  with permissions │
+└─────────────────┘     └──────────────────┘     └───────────────────┘
+                               │
+                               ▼
+                    ┌──────────────────┐
+                    │  Roles assigned  │
+                    │  Rules posted    │
+                    │  Info embed sent │
+                    │  History logged  │
+                    └──────────────────┘
+                               │
+                               ▼
+              ┌────────────────────────────┐
+              │   Background Tasks Run     │
+              │   • Expire check (1hr)     │
+              │   • Ping reset (24hr)      │
+              │   • Auto role cleanup      │
+              │   • Audit log updates      │
+              └────────────────────────────┘
 ```
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
-
-- Reporting bugs
-- Suggesting features
-- Submitting pull requests
-- Code style guidelines
-
-[![Discord](https://img.shields.io/badge/Join_our_Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/JdyvFVgsTN)
-
----
-
-## 💡 Tips
+## 💡 Tips & Notes
 
 > [!NOTE]
 > The bot needs **Administrator** permissions and should be positioned **above** the slot roles in the role hierarchy.
 
 > [!TIP]
-> Set up a dedicated **log channel** and add its ID to `config.json` as `log_channel_id` to track all slot actions.
+> Use the `,setup` command for easy first-time configuration instead of manually editing `config.json`.
+
+> [!TIP]
+> Set up a dedicated **log channel** to track all slot actions with timestamps.
 
 > [!WARNING]
-> Make sure to create **two separate categories** in your Discord server for `categoryid_1` and `categoryid_2` before running the bot.
+> Create **two separate categories** in your Discord server before running the bot.
+
+> [!CAUTION]
+> Users with **3+ warnings** should be reviewed for potential slot revocation.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+
+[![Discord](https://img.shields.io/badge/Join_our_Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/JdyvFVgsTN)
 
 ---
 
