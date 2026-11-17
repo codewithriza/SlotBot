@@ -1,0 +1,34 @@
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ─── Virtual Environment ─────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+
+# ─── IDE / Editor ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Bot Secrets & Runtime Data ──────────────────────────────────────────────
+# NEVER commit your real token!
+# config.json is tracked with placeholder values only.
+slotbot.log
+
+# ─── OS Files ────────────────────────────────────────────────────────────────
+.DS_Store
+desktop.ini
